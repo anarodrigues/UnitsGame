@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engineering Notation Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            text-align: center;
+            padding: 20px;      
+        }
+        .game-container {
+            background-color: #fff;
+            border: 2px solid #000;
+            border-radius: 10px;
+            padding: 20px;
+            display: inline-block;
+            min-width: 400px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .score, .timer {
+            font-size: 24px;
+            margin: 10px 0;
+        }
+        #randomNumber {
+            font-size: 26px;
+            font-weight: bold;
+            margin: 20px 0;
+            line-height: 1.6;
+            letter-spacing: 1px;
+        }
+        .input-group {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        #valueInput {
+            padding: 10px;
+            font-size: 20px;
+            width: 120px;
+            text-align: center;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+        }
+        #valueInput:focus {
+            border-color: #007BFF;
+            outline: none;
+        }
+        .prefix-container {
+            margin: 15px 0;
+        }
+        .prefix-btn {
+            padding: 10px 20px;
+            font-size: 18px;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            margin: 5px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        /* Blue style for negative exponents */
+        .prefix-btn.negative {
+            background-color: #007BFF;
+        }
+        .prefix-btn.negative:hover {
+            background-color: #0056b3;
+        }
+        /* Orange style for positive exponents */
+        .prefix-btn.positive {
+            background-color: #ff8c00;
+        }
+        .prefix-btn.positive:hover {
+            background-color: #cc7000;
+        }
+        .prefix-btn:active {
+            transform: scale(0.95);
+        }
+        #startBtn {
+            padding: 12px 25px;
+            font-size: 18px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #startBtn:hover {
+            background-color: #218838;
+        }
+
+        /* --- CUSTOM MODAL CSS STYLES --- */
+        .modal-overlay {
+            display: none; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); 
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-box {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+            max-width: 400px;
+            width: 85%;
+            text-align: center;
+            animation: popupScale 0.2s ease-out;
+        }
+        @keyframes popupScale {
+            from { transform: scale(0.7); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-title {
+            font-size: 28px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .modal-body {
+            font-size: 18px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        .modal-btn {
+            padding: 10px 30px;
+            font-size: 18px;
+            color: #fff;
+            background-color: #333;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .modal-btn:hover {
+            background-color: #555;
+        }
+        .modal-box.correct { border-top: 8px solid #28a745; }
+        .modal-box.correct .modal-title { color: #28a745; }
+        .modal-box.wrong { border-top: 8px solid #dc3545; }
+        .modal-box.wrong .modal-title { color: #dc3545; }
+        .modal-box.gameover { border-top: 8px solid #007BFF; }
+        .modal-box.gameover .modal-title { color: #007BFF; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Engineering Notation Game</h1>
+        <h2>Developed by Ana Rodrigues - May 2026</h2>
+        <div class="score">Score: 0</div>
+        <div class="timer">Time: 60s</div>
+        
+        <div id="randomNumber">Press "Start Game" to begin!</div>
+
+        <div id="gameplayArea" style="display: none;">
+            <div class="input-group">
+                <input type="number" id="valueInput" step="any" placeholder="Value..." autocomplete="off">
+                <span style="font-size: 20px; font-weight: bold;">&rarr; Choose Prefix:</span>
+            </div>
+            <div class="prefix-container">
+                </div>
+        </div>
+        
+        <button id="startBtn" onclick="startGame()">Start Game</button>
+    </div>
+
+    <div id="customModal" class="modal-overlay">
+        <div id="modalBox" class="modal-box">
+            <div id="modalTitle" class="modal-title">Notification</div>
+            <div id="modalBody" class="modal-body">Message text goes here...</div>
+            <button id="modalCloseBtn" class="modal-btn" onclick="closeCustomModal()">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // Added Pico ('p') at the beginning to maintain strict crescent order
+        const prefixArray = [
+            { exponent: -12, symbol: 'p' }, // Pico (First)
+            { exponent: -9,  symbol: 'n' }, // Nano
+            { exponent: -6,  symbol: 'µ' }, // Micro
+            { exponent: -3,  symbol: 'm' }, // Milli
+            { exponent: 3,   symbol: 'k' }, // Kilo
+            { exponent: 6,   symbol: 'M' }, // Mega
+            { exponent: 9,   symbol: 'G' }, // Giga
+            { exponent: 12,  symbol: 'T' }  // Tera (Last)
+        ];
+
+        let score = 0;
+        let mistakes = 0;
+        let timeLeft = 60;
+        let timer = null;
+        let isPausedForPopup = false; 
+        let currentModalMode = ''; 
+        
+        let expectedValue = 0;
+        let expectedPrefix = '';
+
+        function createPrefixButtons() {
+            const container = document.querySelector('.prefix-container');
+            container.innerHTML = ''; 
+            
+            // Loops through our explicitly ordered array
+            prefixArray.forEach(item => {
+                const button = document.createElement('button');
+                
+                // Assign CSS class dynamically based on value scale
+                if (item.exponent > 0) {
+                    button.className = 'prefix-btn positive';
+                } else {
+                    button.className = 'prefix-btn negative';
+                }
+                
+                button.textContent = item.symbol;
+                button.onclick = () => {
+                    if (timeLeft > 0 && timer !== null && !isPausedForPopup) {
+                        checkAnswer(item.symbol);
+                    }
+                };
+                container.appendChild(button);
+            });
+        }
+
+        function nextQuestion() {
+            // Pick a random index item from the explicit array layout
+            const randomItem = prefixArray[Math.floor(Math.random() * prefixArray.length)];
+            const targetExponent = randomItem.exponent;
+            
+            let randomMultiplier = 1;
+            const formatType = Math.floor(Math.random() * 3); 
+            if (formatType === 0) {
+                randomMultiplier = parseFloat((Math.random() * 8.9 + 1).toFixed(1)); 
+            } else if (formatType === 1) {
+                randomMultiplier = Math.floor(Math.random() * 89 + 10); 
+            } else {
+                randomMultiplier = Math.floor(Math.random() * 899 + 100); 
+            }
+            
+            const rawValue = randomMultiplier * Math.pow(10, targetExponent);
+            
+            let displayValue = '';
+            if (targetExponent < 0) {
+                // Adjusting precision to ensure pico values don't get truncated or written as scientific notation
+                displayValue = rawValue.toFixed(Math.abs(targetExponent) + 2).replace(/\.?0+$/, "");
+            } else {
+                displayValue = rawValue.toLocaleString('fullwide', {useGrouping: false});
+            }
+
+            expectedValue = randomMultiplier;
+            expectedPrefix = randomItem.symbol;
+
+            document.getElementById('valueInput').value = '';
+            document.getElementById('valueInput').focus();
+
+            document.getElementById('randomNumber').innerHTML = 
+                `Convert to Engineering Notation:<br><br>` +
+                `<span style="color: #007BFF;">${displayValue}</span>`;
+        }
+
+        function showCustomModal(type, title, message) {
+            isPausedForPopup = true;
+            currentModalMode = type;
+
+            const modalOverlay = document.getElementById('customModal');
+            const modalBox = document.getElementById('modalBox');
+            
+            modalBox.className = `modal-box ${type}`;
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = message;
+            
+            modalOverlay.style.display = 'flex';
+            document.getElementById('modalCloseBtn').focus();
+        }
+
+        function closeCustomModal() {
+            document.getElementById('customModal').style.display = 'none';
+            isPausedForPopup = false;
+
+            if (currentModalMode === 'gameover') {
+                resetMainUI();
+            } else {
+                nextQuestion();
+            }
+        }
+
+        function startGame() {
+            clearInterval(timer);
+            score = 0;
+            mistakes = 0;
+            timeLeft = 60;
+            isPausedForPopup = false;
+            
+            document.querySelector('.score').textContent = `Score: ${score}`;
+            document.querySelector('.timer').textContent = `Time: ${timeLeft}s`;
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('gameplayArea').style.display = 'block';
+
+            createPrefixButtons();
+            nextQuestion();
+
+            document.getElementById('valueInput').onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    showCustomModal('wrong', 'Notice', 'Type the number value, then click a prefix button!');
+                }
+            };
+
+            timer = setInterval(() => {
+                if (!isPausedForPopup) {
+                    timeLeft--;
+                    document.querySelector('.timer').textContent = `Time: ${timeLeft}s`;
+                    if (timeLeft <= 0) {
+                        triggerEndGameSequence();
+                    }
+                }
+            }, 1000);
+        }
+
+        function checkAnswer(chosenPrefix) {
+            const userValueStr = document.getElementById('valueInput').value.trim();
+            
+            if (userValueStr === '') {
+                showCustomModal('wrong', 'Missing Value', 'Please enter a numeric value first before selecting a prefix.');
+                return;
+            }
+
+            const userValue = parseFloat(userValueStr);
+            const isValueCorrect = Math.abs(userValue - expectedValue) < 0.01;
+            const isPrefixCorrect = (chosenPrefix === expectedPrefix);
+
+            if (isValueCorrect && isPrefixCorrect) {
+                score++;
+                document.querySelector('.score').textContent = `Score: ${score}`;
+                showCustomModal('correct', '🎉 Correct!', 'Great job! Keep moving.');
+            } else {
+                mistakes++;
+                const messageHtml = `The correct engineering notation structure was:<br><br><b style="font-size: 22px;">${expectedValue} ${expectedPrefix}</b>`;
+                
+                if (mistakes >= 3) {
+                    triggerEndGameSequence(messageHtml);
+                } else {
+                    showCustomModal('wrong', '❌ Incorrect', messageHtml);
+                }
+            }
+        }
+
+        function triggerEndGameSequence(extraMessage = '') {
+            clearInterval(timer);
+            timer = null;
+            
+            let finalMessage = `Your final score is <b>${score}</b>.`;
+            if (extraMessage) {
+                finalMessage = extraMessage + `<br><br><hr style="border:0;border-top:1px solid #eee;"><br>` + finalMessage;
+            }
+            
+            showCustomModal('gameover', '🏁 Game Over!', finalMessage);
+        }
+
+        function resetMainUI() {
+            document.getElementById('gameplayArea').style.display = 'none';
+            document.getElementById('startBtn').textContent = 'Play Again';
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('randomNumber').textContent = 'Press "Play Again" to restart!';
+        }
+    </script>
+</body>
+</html>
